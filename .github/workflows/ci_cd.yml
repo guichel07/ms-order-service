@@ -1,0 +1,105 @@
+name: Quarkus CI Pipeline
+
+on:
+  push:
+    branches: ["main", "develop"]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      # 1. Récupération du code source
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Configuration du JDK (Quarkus tourne parfaitement sur Java 21)
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      # 3. Validation et mise en cache automatique de Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      # 4. Compilation du projet et exécution des tests
+      - name: Run Tests with Gradle
+        env:
+          CLE_SECRET: "ma_cle_secrete_de_test_exactement_32_carac"
+        run: ./gradlew check test
+
+      # 5. Build Quarkus (génère build/quarkus-app/)
+      - name: Build Quarkus Application
+        env:
+          CLE_SECRET: "ma_cle_secrete_de_test_exactement_32_carac"
+        run: ./gradlew build -x test
+
+      # 6. On garde l'artefact buildé pour le job de déploiement, sans le rebuild
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: quarkus-app
+          path: build/quarkus-app/
+
+  deploy:
+    needs: build-and-test
+    # Ne déploie que sur un tag vX.Y.Z (ex: v1.0.0), jamais sur un simple push ou une PR
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: quarkus-app
+          path: build/quarkus-app/
+
+      - name: Copy files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "build/quarkus-app/,Containerfile"
+          target: "~/ms-order-service"
+
+      - name: Build & restart container in pod
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_IP }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GITHUB_REF_NAME
+          script: |
+            set -e
+            cd ~/ms-order-service
+            VERSION="${GITHUB_REF_NAME#v}"
+
+            podman build \
+              -t maman-solution/ms-order-service:latest \
+              -t maman-solution/ms-order-service:$VERSION \
+              -f Containerfile .
+
+            # Filet de sécurité : recrée le pod seulement s'il n'existe pas déjà
+            podman pod exists maman-solution || podman pod create --name maman-solution -p 8080:8080 -p 8081:8081 -p 8082:8082
+
+            podman stop ms-order-service|| true
+            podman rm ms-order-service || true
+
+            podman run -d --pod maman-solution --name ms-order-service \
+              --env-file ~/secrets/ms-order-service.env \
+              -v ~/secrets/keys:/app/keys:ro \
+              maman-solution/ms-order-service:$VERSION
+
+            # Nettoyage : ne garde que les 5 dernières versions taguées (hors "latest")
+            podman images maman-solution/ms-order-service --format "{{.Tag}}" \
+              | grep -v latest \
+              | sort -Vr \
+              | tail -n +6 \
+              | xargs -I {} podman rmi maman-solution/ms-order-service:{} 2>/dev/null || true
