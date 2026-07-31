@@ -4,6 +4,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -16,11 +17,10 @@ import jakarta.ws.rs.core.Response;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import org.acme.DTO.OrderDTO;
-import org.acme.Entity.Order;
+import org.acme.DTO.OrderRequestDTO;
+import org.acme.DTO.OrderResponseDTO;
 import org.acme.Exception.BusinessException;
 import org.acme.Service.Order.OrderService;
-import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,27 +30,33 @@ class OrderResourceTest {
     @InjectMock
     OrderService orderService;
 
-    private Order sampleOrder;
+    private OrderResponseDTO sampleOrder;
 
     @BeforeEach
     void setUp() {
-        sampleOrder = new Order();
-        sampleOrder.id = new ObjectId();
-        sampleOrder.setReceiptNumber("CMD-ABCD1234");
-        sampleOrder.setSellerName("Jean Dupont");
-        sampleOrder.setEmail("jean.dupont@example.com");
-        sampleOrder.setDailySummary(new BigDecimal("42.50"));
-        sampleOrder.setSaleDate(Instant.now());
-        sampleOrder.setArticles(new java.util.ArrayList<>());
+        sampleOrder = new OrderResponseDTO(
+                "64f1a2b3c4d5e6f7a8b9c0d1",
+                "CMD-ABCD1234",
+                new java.util.Date(),
+                "Jean Dupont",
+                "jean.dupont@example.com",
+                "0102030405",
+                "64f1a2b3c4d5e6f7a8b9c0d2",
+                new BigDecimal("42.50"),
+                Instant.now(),
+                List.of(),
+                null
+        );
     }
 
-    private OrderDTO validOrderDTO() {
-        return new OrderDTO(
+    private OrderRequestDTO validOrderDTO() {
+        return new OrderRequestDTO(
                 "Jean Dupont",
                 "jean.dupont@example.com",
                 Instant.now(),
                 new BigDecimal("42.50"),
-                List.of(new OrderDTO.OrderLineDTO("64f1a2b3c4d5e6f7a8b9c0d1", new BigDecimal("10.00"), 2))
+                "0102030405",
+                List.of(new OrderRequestDTO.OrderLineRequestDTO("64f1a2b3c4d5e6f7a8b9c0d1", new BigDecimal("10.00"), 2))
         );
     }
 
@@ -119,7 +125,7 @@ class OrderResourceTest {
     @Test
     @TestSecurity(user = "seller1", roles = { "SELLER" })
     void register_shouldReturn201_whenPayloadIsValid() {
-        when(orderService.register(any(OrderDTO.class))).thenReturn(sampleOrder);
+        when(orderService.register(any(OrderRequestDTO.class))).thenReturn(sampleOrder);
 
         given()
                 .contentType("application/json")
@@ -133,12 +139,13 @@ class OrderResourceTest {
     @Test
     @TestSecurity(user = "seller1", roles = { "SELLER" })
     void register_shouldReturn400_whenSellerNameIsBlank() {
-        OrderDTO invalid = new OrderDTO(
+        OrderRequestDTO invalid = new OrderRequestDTO(
                 "",
                 "jean.dupont@example.com",
                 Instant.now(),
                 new BigDecimal("42.50"),
-                List.of(new OrderDTO.OrderLineDTO("64f1a2b3c4d5e6f7a8b9c0d1", new BigDecimal("10.00"), 2))
+                "0102030405",
+                List.of(new OrderRequestDTO.OrderLineRequestDTO("64f1a2b3c4d5e6f7a8b9c0d1", new BigDecimal("10.00"), 2))
         );
 
         given()
@@ -152,11 +159,12 @@ class OrderResourceTest {
     @Test
     @TestSecurity(user = "seller1", roles = { "SELLER" })
     void register_shouldReturn400_whenItemsListIsEmpty() {
-        OrderDTO invalid = new OrderDTO(
+        OrderRequestDTO invalid = new OrderRequestDTO(
                 "Jean Dupont",
                 "jean.dupont@example.com",
                 Instant.now(),
                 new BigDecimal("42.50"),
+                "0102030405",
                 List.of()
         );
 
@@ -174,6 +182,32 @@ class OrderResourceTest {
                 .contentType("application/json")
                 .body(validOrderDTO())
                 .when().post("/orders")
+                .then()
+                .statusCode(401);
+    }
+
+    // ---------- POST /orders/batch ----------
+
+    @Test
+    @TestSecurity(user = "seller1", roles = { "SELLER" })
+    void registerAll_shouldReturn201_whenPayloadIsValid() {
+        when(orderService.registerAll(anyList())).thenReturn(List.of(sampleOrder, sampleOrder));
+
+        given()
+                .contentType("application/json")
+                .body(List.of(validOrderDTO(), validOrderDTO()))
+                .when().post("/orders/batch")
+                .then()
+                .statusCode(201)
+                .body("$", hasSize(2));
+    }
+
+    @Test
+    void registerAll_shouldReturnUnauthorized_whenNoAuthentication() {
+        given()
+                .contentType("application/json")
+                .body(List.of(validOrderDTO()))
+                .when().post("/orders/batch")
                 .then()
                 .statusCode(401);
     }

@@ -3,8 +3,8 @@ package org.acme.DTO;
 import jakarta.validation.constraints.Positive;
 
 /**
- * quantityOrdered
+ * QuantityOrderedDTO
  */
-public record QuantityOrdered(
+public record QuantityOrderedDTO(
     @Positive(message = "La quantité à ajouter doit être positive") int quantity
 ) {}

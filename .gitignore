@@ -41,3 +41,4 @@ nb-configuration.xml
 .certs/
 
 src/main/resources/publicKey.pem
+src/main/resources/devPublicKey.pem

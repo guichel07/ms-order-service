@@ -10,12 +10,16 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import org.acme.DTO.OrderDTO;
-import org.acme.Entity.Article;
+import org.acme.DTO.ArticleResponseDTO;
+import org.acme.DTO.OrderRequestDTO;
+import org.acme.DTO.OrderResponseDTO;
+import org.acme.Entity.Client;
 import org.acme.Entity.Order;
 import org.acme.Entity.OrderItem;
 import org.acme.Exception.BusinessException;
+import org.acme.Repository.ClientRepository;
 import org.acme.Repository.OrderRepository;
+import org.acme.Service.Alert.AlertService;
 import org.acme.Service.Article.ArticleService;
 import org.acme.Service.Order.OrderService;
 import org.bson.types.ObjectId;
@@ -25,20 +29,30 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final ArticleService articleService;
+    private final ClientRepository clientRepository;
+    private final AlertService alertService;
 
     public OrderServiceImpl(
         OrderRepository _orderRepository,
-        ArticleService _articleService
+        ArticleService _articleService,
+        ClientRepository _clientRepository,
+        AlertService _alertService
     ) {
         this.orderRepository = _orderRepository;
         this.articleService = _articleService;
+        this.clientRepository = _clientRepository;
+        this.alertService = _alertService;
     }
 
-    public List<Order> listAll() {
-        return orderRepository.listAll();
+    public List<OrderResponseDTO> listAll() {
+        return orderRepository
+            .listAll()
+            .stream()
+            .map(OrderResponseDTO::fromEntity)
+            .toList();
     }
 
-    public Order findById(String id) {
+    public OrderResponseDTO findById(String id) {
         Order orderFound = orderRepository.findById(new ObjectId(id));
 
         if (orderFound == null) {
@@ -48,24 +62,53 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
-        return orderFound;
+        return OrderResponseDTO.fromEntity(orderFound);
     }
 
     @Transactional
-    public Order register(OrderDTO orderDTO) {
-        ArrayList<OrderItem> items = new ArrayList<>();
+    public void delete(String id) {
+        Order orderFound = orderRepository.findById(new ObjectId(id));
 
-        for (OrderDTO.OrderLineDTO line : orderDTO.items()) {
-            Article article = articleService.findById(line.articleId());
-
-            items.add(
-                new OrderItem(
-                    article.id.toHexString(),
-                    article.getName(),
-                    line.price(),
-                    line.quantity()
-                )
+        if (orderFound == null) {
+            throw new BusinessException(
+                Response.Status.NOT_FOUND,
+                "Order not found " + id
             );
+        }
+
+        orderRepository.delete(orderFound);
+    }
+
+    @Transactional
+    public OrderResponseDTO register(OrderRequestDTO orderDTO) {
+        Client client = resolveClient(orderDTO.clientId());
+
+        ArrayList<OrderItem> items = new ArrayList<>();
+        ArrayList<OrderItem> negativeMarginItems = new ArrayList<>();
+        BigDecimal delta = BigDecimal.ZERO;
+
+        for (OrderRequestDTO.OrderLineRequestDTO line : orderDTO.items()) {
+            ArticleResponseDTO article = articleService.findById(line.articleId());
+
+            OrderItem item = new OrderItem(
+                article.id(),
+                article.name(),
+                line.price(),
+                line.quantity()
+            );
+            item.setUnitCost(article.costPrice());
+            items.add(item);
+
+            delta = delta.add(
+                line
+                    .price()
+                    .subtract(article.costPrice())
+                    .multiply(BigDecimal.valueOf(line.quantity()))
+            );
+
+            if (line.price().compareTo(article.costPrice()) < 0) {
+                negativeMarginItems.add(item);
+            }
 
             articleService.decrementQuantity(line.articleId(), line.quantity());
         }
@@ -77,11 +120,53 @@ public class OrderServiceImpl implements OrderService {
         order.setSellerName(orderDTO.sellerName());
         order.setSaleDate(orderDTO.saleDate());
         order.setEmail(orderDTO.email());
+        order.setClientPhone(client.getPhone());
+        order.setClientId(orderDTO.clientId());
         order.setArticles(items);
+        order.setDelta(delta);
 
         orderRepository.persist(order);
 
-        return order;
+        // Le Gendarme : une vente en dessous du coût de revient réel procède quand
+        // même (jamais bloquée), mais lève une alerte pour revue admin.
+        for (OrderItem negativeMarginItem : negativeMarginItems) {
+            alertService.recordNegativeMarginSale(
+                order.id.toHexString(),
+                negativeMarginItem.getArticleId(),
+                order.getSellerName(),
+                negativeMarginItem.getName(),
+                negativeMarginItem.getPrice(),
+                negativeMarginItem.getUnitCost(),
+                negativeMarginItem.getPrice().subtract(negativeMarginItem.getUnitCost()),
+                negativeMarginItem.getQuantityOrdered()
+            );
+        }
+
+        return OrderResponseDTO.fromEntity(order);
+    }
+
+    /**
+     * Le front a déjà résolu (ou créé) le client avant de construire la commande — il
+     * envoie directement son id. On vérifie juste qu'il existe bien.
+     */
+    private Client resolveClient(String clientId) {
+        Client client;
+        try {
+            client = clientRepository.findById(new ObjectId(clientId));
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(Response.Status.BAD_REQUEST, "Identifiant client invalide");
+        }
+
+        if (client == null) {
+            throw new BusinessException(Response.Status.NOT_FOUND, "Client not found");
+        }
+
+        return client;
+    }
+
+    @Transactional
+    public List<OrderResponseDTO> registerAll(List<OrderRequestDTO> orders) {
+        return orders.stream().map(this::register).toList();
     }
 
     private String generateReceiptNumber() {

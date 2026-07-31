@@ -2,15 +2,19 @@ package org.acme.Service.Order;
 
 import java.math.BigDecimal;
 import java.util.List;
-import org.acme.DTO.OrderDTO;
-import org.acme.Entity.Order;
+import org.acme.DTO.OrderRequestDTO;
+import org.acme.DTO.OrderResponseDTO;
 
 public interface OrderService {
-    List<Order> listAll();
+    List<OrderResponseDTO> listAll();
 
-    Order findById(String id);
+    OrderResponseDTO findById(String id);
 
-    Order register(OrderDTO orderDTO);
+    void delete(String id);
+
+    OrderResponseDTO register(OrderRequestDTO orderDTO);
+
+    List<OrderResponseDTO> registerAll(List<OrderRequestDTO> orders);
 
     BigDecimal getTotalSoldTodayByEmail(String email);
 }

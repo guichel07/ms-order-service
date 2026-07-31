@@ -9,7 +9,7 @@ import java.util.List;
 
 import org.wildfly.common.annotation.NotNull;
 
-public record OrderDTO(
+public record OrderRequestDTO(
     @NotBlank(message = "Le nom du vendeur est obligatoire") String sellerName,
 
     @Email(message = "L'email doit être valide") String email,
@@ -18,10 +18,12 @@ public record OrderDTO(
 
     @NotNull BigDecimal dailySummary,
 
+    @NotBlank(message = "L'identifiant du client est obligatoire") String clientId,
+
     @NotEmpty(message = "La commande doit contenir au moins un article")
-    List<OrderLineDTO> items
+    List<OrderLineRequestDTO> items
 ) {
-    public record OrderLineDTO(
+    public record OrderLineRequestDTO(
         @NotBlank(message = "L'identifiant de l'article est obligatoire")
         String articleId,
         BigDecimal price,
