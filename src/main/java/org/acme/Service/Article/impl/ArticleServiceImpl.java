@@ -29,6 +29,24 @@ public class ArticleServiceImpl implements ArticleService {
         this.articleRepository = _articleRepository;
     }
 
+    /**
+     * Un article vendu à la pièce (Unit.PIECE) ne peut avoir qu'une quantité entière —
+     * seul Unit.KG autorise les valeurs fractionnaires. Validé ici pour que la contrainte
+     * s'applique quel que soit l'appelant (front, script, appel API direct), pas seulement
+     * les UI qui la respectent déjà (ms-section-admin, ms-section-achats).
+     */
+    private void validatePieceQuantityIsWhole(Unit unit, BigDecimal quantity) {
+        if (unit != Unit.PIECE || quantity == null) {
+            return;
+        }
+        if (quantity.remainder(BigDecimal.ONE).compareTo(BigDecimal.ZERO) != 0) {
+            throw new BusinessException(
+                Response.Status.BAD_REQUEST,
+                "Un article vendu à la pièce ne peut pas avoir une quantité fractionnaire"
+            );
+        }
+    }
+
     /** Coût de revient à l'unité — toujours recalculé ici, jamais reçu tel quel du front. */
     private BigDecimal computeCostPrice(ArticleRequestDTO articleDTO) {
         BigDecimal purchasePrice = articleDTO.purchasePrice() != null ? articleDTO.purchasePrice() : BigDecimal.ZERO;
@@ -114,6 +132,10 @@ public class ArticleServiceImpl implements ArticleService {
             );
         }
 
+        Unit unit = articleDTO.unit() != null ? articleDTO.unit() : Unit.PIECE;
+        validatePieceQuantityIsWhole(unit, articleDTO.quantity());
+        validatePieceQuantityIsWhole(unit, articleDTO.purchasedQuantity());
+
         Article article = new Article();
         article.setName(articleDTO.name());
         article.setIcon(articleDTO.icon());
@@ -125,7 +147,7 @@ public class ArticleServiceImpl implements ArticleService {
         article.setCostPrice(computeCostPrice(articleDTO));
         article.setMarketPrice(articleDTO.marketPrice());
         article.setQuantity(articleDTO.quantity());
-        article.setUnit(articleDTO.unit() != null ? articleDTO.unit() : Unit.PIECE);
+        article.setUnit(unit);
         article.setPurchasePrice(articleDTO.purchasePrice());
         article.setTransport(articleDTO.transport());
         article.setMisc(articleDTO.misc());
@@ -165,6 +187,10 @@ public class ArticleServiceImpl implements ArticleService {
             );
         }
 
+        Unit unit = articleDTO.unit() != null ? articleDTO.unit() : Unit.PIECE;
+        validatePieceQuantityIsWhole(unit, articleDTO.quantity());
+        validatePieceQuantityIsWhole(unit, articleDTO.purchasedQuantity());
+
         BigDecimal newCostPrice = computeCostPrice(articleDTO);
         PriceReview priceReview = evaluatePriceReview(articleFound, articleDTO, newCostPrice);
 
@@ -177,7 +203,7 @@ public class ArticleServiceImpl implements ArticleService {
         articleFound.setMinPrice(articleDTO.minPrice());
         articleFound.setMarketPrice(articleDTO.marketPrice());
         articleFound.setQuantity(articleDTO.quantity());
-        articleFound.setUnit(articleDTO.unit() != null ? articleDTO.unit() : Unit.PIECE);
+        articleFound.setUnit(unit);
         articleFound.setPurchasePrice(articleDTO.purchasePrice());
         articleFound.setTransport(articleDTO.transport());
         articleFound.setMisc(articleDTO.misc());
@@ -220,6 +246,8 @@ public class ArticleServiceImpl implements ArticleService {
             );
         }
 
+        validatePieceQuantityIsWhole(articleFound.getUnit(), quantityOrdered);
+
         articleFound.setQuantity(articleFound.getQuantity().subtract(quantityOrdered));
         articleRepository.update(articleFound);
 
@@ -235,6 +263,8 @@ public class ArticleServiceImpl implements ArticleService {
                 "Article not found " + id
             );
         }
+
+        validatePieceQuantityIsWhole(articleFound.getUnit(), qty);
 
         BigDecimal newCostPrice = purchasePrice.add(transportShare)
             .divide(qty, 4, RoundingMode.HALF_UP);
@@ -289,6 +319,8 @@ public class ArticleServiceImpl implements ArticleService {
                 "La quantité à ajouter doit être positive"
             );
         }
+
+        validatePieceQuantityIsWhole(articleFound.getUnit(), quantityAdded);
 
         articleFound.setQuantity(articleFound.getQuantity().add(quantityAdded));
         articleRepository.update(articleFound);

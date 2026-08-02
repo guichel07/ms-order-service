@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,7 +24,6 @@ import org.acme.Exception.BusinessException;
 import org.acme.Repository.ArticleRepository;
 import org.acme.Repository.OrderRepository;
 import org.acme.Service.Article.ArticleBundleService;
-import org.bson.types.ObjectId;
 
 /**
  * Bundles "produits qui vont ensemble" par tranche horaire, pour les PDF marketing.
