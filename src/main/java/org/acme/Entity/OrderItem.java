@@ -23,6 +23,16 @@ public class OrderItem {
      */
     private BigDecimal unitCost;
 
+    /**
+     * Libellé du palier de vente choisi (ex: "Carton de 12"), ou l'unité atomique de
+     * l'article si vendu à l'unité de base — snapshoté ici car packagingLevels peut
+     * évoluer/disparaître après la vente sans que l'historique des commandes bouge.
+     */
+    private String soldAsLabel;
+
+    /** Ratio (nb d'unités atomiques) du palier choisi au moment de la vente — 1 si vente à l'unité atomique. */
+    private BigDecimal soldAsRatio;
+
     public OrderItem(String articleId, String name, BigDecimal price, BigDecimal quantityOrdered) {
         this.articleId = articleId;
         this.name = name;

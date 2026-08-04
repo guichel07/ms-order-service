@@ -2,7 +2,7 @@ package org.acme.DTO;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import org.acme.Entity.Unit;
+import java.util.List;
 
 /**
  * costPrice n'est volontairement pas un champ d'entrée — il est toujours recalculé
@@ -38,7 +38,11 @@ public record ArticleRequestDTO(
 
     BigDecimal criticalStock,
 
-    Unit unit,
+    /** Plus petite unité indivisible vendable pour cet article ("pièce", "kg", "verre"...). */
+    String atomicUnit,
+
+    /** Paliers de vente additionnels (vide = vente strictement à l'unité atomique). */
+    List<PackagingLevelDTO> packagingLevels,
 
     boolean locked,
 

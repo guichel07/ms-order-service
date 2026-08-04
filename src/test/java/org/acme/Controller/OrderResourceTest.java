@@ -56,7 +56,7 @@ class OrderResourceTest {
                 Instant.now(),
                 new BigDecimal("42.50"),
                 "0102030405",
-                List.of(new OrderRequestDTO.OrderLineRequestDTO("64f1a2b3c4d5e6f7a8b9c0d1", new BigDecimal("10.00"), BigDecimal.valueOf(2)))
+                List.of(new OrderRequestDTO.OrderLineRequestDTO("64f1a2b3c4d5e6f7a8b9c0d1", new BigDecimal("10.00"), BigDecimal.valueOf(2), null))
         );
     }
 
@@ -145,7 +145,7 @@ class OrderResourceTest {
                 Instant.now(),
                 new BigDecimal("42.50"),
                 "0102030405",
-                List.of(new OrderRequestDTO.OrderLineRequestDTO("64f1a2b3c4d5e6f7a8b9c0d1", new BigDecimal("10.00"), BigDecimal.valueOf(2)))
+                List.of(new OrderRequestDTO.OrderLineRequestDTO("64f1a2b3c4d5e6f7a8b9c0d1", new BigDecimal("10.00"), BigDecimal.valueOf(2), null))
         );
 
         given()

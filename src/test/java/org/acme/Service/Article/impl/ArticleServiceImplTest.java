@@ -4,7 +4,6 @@ import jakarta.ws.rs.core.Response;
 import org.acme.DTO.ArticleRequestDTO;
 import org.acme.DTO.ArticleResponseDTO;
 import org.acme.Entity.Article;
-import org.acme.Entity.Unit;
 import org.acme.Exception.BusinessException;
 import org.acme.Repository.ArticleRepository;
 import org.bson.types.ObjectId;
@@ -75,7 +74,8 @@ class ArticleServiceImplTest {
                 BigDecimal.valueOf(1),
                 BigDecimal.valueOf(10),
                 BigDecimal.valueOf(5),
-                Unit.PIECE,
+                "pièce",
+                List.of(),
                 false,
                 false,
                 null
@@ -195,47 +195,6 @@ class ArticleServiceImplTest {
         verify(articleRepository, never()).persist(any(Article.class));
     }
 
-    @Test
-    void register_shouldThrowBadRequest_whenPieceArticleHasFractionalQuantity() {
-        ArticleRequestDTO dto = new ArticleRequestDTO(
-                "Café", "icon.png", "#FF0000", "Boissons",
-                BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5),
-                BigDecimal.valueOf(2.5), BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.valueOf(1), BigDecimal.valueOf(10.5), BigDecimal.valueOf(5),
-                Unit.PIECE, false, false, null
-        );
-        when(articleRepository.count("name", "Café")).thenReturn(0L);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> articleService.register(dto)
-        );
-
-        assertEquals(Response.Status.BAD_REQUEST, exception.getErrorCode());
-        verify(articleRepository, never()).persist(any(Article.class));
-    }
-
-    @Test
-    void register_allowsFractionalQuantity_whenArticleIsSoldByKg() {
-        ArticleRequestDTO dto = new ArticleRequestDTO(
-                "Riz parfumé (au kg)", "icon.png", "#FF0000", "Alimentation",
-                BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5),
-                BigDecimal.valueOf(2.5), BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.valueOf(1), BigDecimal.valueOf(10.5), BigDecimal.valueOf(5),
-                Unit.KG, false, false, null
-        );
-        when(articleRepository.count("name", "Riz parfumé (au kg)")).thenReturn(0L);
-        doAnswer(invocation -> {
-            Article persisted = invocation.getArgument(0);
-            persisted.id = new ObjectId();
-            return null;
-        }).when(articleRepository).persist(any(Article.class));
-
-        ArticleResponseDTO result = articleService.register(dto);
-
-        assertEquals(0, BigDecimal.valueOf(10.5).compareTo(result.quantity()));
-    }
-
     // ---------------------------------------------------------------
     // update
     // ---------------------------------------------------------------
@@ -270,34 +229,12 @@ class ArticleServiceImplTest {
     }
 
     @Test
-    void update_shouldThrowBadRequest_whenPieceArticleGivenFractionalQuantity() {
-        Article article = buildArticle("Café", 10);
-        when(articleRepository.findById(article.id)).thenReturn(article);
-
-        ArticleRequestDTO dto = new ArticleRequestDTO(
-                "Café", "icon.png", "#FF0000", "Boissons",
-                BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5),
-                BigDecimal.valueOf(2.5), BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.valueOf(1), BigDecimal.valueOf(10.5), BigDecimal.valueOf(5),
-                Unit.PIECE, false, false, null
-        );
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> articleService.update(article.id.toHexString(), dto)
-        );
-
-        assertEquals(Response.Status.BAD_REQUEST, exception.getErrorCode());
-        verify(articleRepository, never()).update(any(Article.class));
-    }
-
-    @Test
     void register_shouldComputeCostPriceFromPurchaseBreakdown_ignoringAnyCostSentDirectly() {
         ArticleRequestDTO dto = new ArticleRequestDTO(
                 "Café", "icon.png", "#FF0000", "Boissons",
                 BigDecimal.valueOf(5), BigDecimal.valueOf(3), BigDecimal.valueOf(8), BigDecimal.valueOf(5),
                 BigDecimal.valueOf(9000), BigDecimal.valueOf(500), BigDecimal.valueOf(500),
-                BigDecimal.valueOf(10), BigDecimal.valueOf(10), BigDecimal.valueOf(5), Unit.PIECE, false, false, null
+                BigDecimal.valueOf(10), BigDecimal.valueOf(10), BigDecimal.valueOf(5), "pièce", List.of(), false, false, null
         );
         when(articleRepository.count("name", "Café")).thenReturn(0L);
         doAnswer(invocation -> {
@@ -325,7 +262,7 @@ class ArticleServiceImplTest {
                 "Café", "icon.png", "#FF0000", "Boissons",
                 BigDecimal.valueOf(1500), BigDecimal.valueOf(1500), BigDecimal.valueOf(1500), BigDecimal.valueOf(1500),
                 BigDecimal.valueOf(13000), BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.valueOf(10), BigDecimal.valueOf(10), BigDecimal.valueOf(5), Unit.PIECE, true, false, null
+                BigDecimal.valueOf(10), BigDecimal.valueOf(10), BigDecimal.valueOf(5), "pièce", List.of(), true, false, null
         );
 
         ArticleResponseDTO result = articleService.update(article.id.toHexString(), dto);
@@ -348,7 +285,7 @@ class ArticleServiceImplTest {
                 "Café", "icon.png", "#FF0000", "Boissons",
                 BigDecimal.valueOf(1500), BigDecimal.valueOf(1500), BigDecimal.valueOf(1500), BigDecimal.valueOf(1500),
                 BigDecimal.valueOf(13000), BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.valueOf(10), BigDecimal.valueOf(10), BigDecimal.valueOf(5), Unit.PIECE, false, false, null
+                BigDecimal.valueOf(10), BigDecimal.valueOf(10), BigDecimal.valueOf(5), "pièce", List.of(), false, false, null
         );
 
         ArticleResponseDTO result = articleService.update(article.id.toHexString(), dto);
@@ -367,7 +304,7 @@ class ArticleServiceImplTest {
                 "Café", "icon.png", "#FF0000", "Boissons",
                 BigDecimal.valueOf(1500), BigDecimal.valueOf(1500), BigDecimal.valueOf(1500), BigDecimal.valueOf(1500),
                 BigDecimal.valueOf(10200), BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.valueOf(10), BigDecimal.valueOf(10), BigDecimal.valueOf(5), Unit.PIECE, true, false, null
+                BigDecimal.valueOf(10), BigDecimal.valueOf(10), BigDecimal.valueOf(5), "pièce", List.of(), true, false, null
         );
 
         ArticleResponseDTO result = articleService.update(article.id.toHexString(), dto);
@@ -471,23 +408,9 @@ class ArticleServiceImplTest {
     }
 
     @Test
-    void decrementQuantity_shouldThrowBadRequest_whenPieceArticleGivenFractionalQuantity() {
-        Article article = buildArticle("Café", 10);
-        when(articleRepository.findById(article.id)).thenReturn(article);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> articleService.decrementQuantity(article.id.toHexString(), BigDecimal.valueOf(2.5))
-        );
-
-        assertEquals(Response.Status.BAD_REQUEST, exception.getErrorCode());
-        verify(articleRepository, never()).update(any(Article.class));
-    }
-
-    @Test
     void decrementQuantity_allowsFractionalQuantity_whenArticleIsSoldByKg() {
         Article article = buildArticle("Riz parfumé (au kg)", 10);
-        article.setUnit(Unit.KG);
+        article.setAtomicUnit("kg");
         when(articleRepository.findById(article.id)).thenReturn(article);
 
         ArticleResponseDTO result = articleService.decrementQuantity(article.id.toHexString(), BigDecimal.valueOf(2.5));
@@ -536,23 +459,9 @@ class ArticleServiceImplTest {
     }
 
     @Test
-    void incrementQuantity_shouldThrowBadRequest_whenPieceArticleGivenFractionalQuantity() {
-        Article article = buildArticle("Café", 10);
-        when(articleRepository.findById(article.id)).thenReturn(article);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> articleService.incrementQuantity(article.id.toHexString(), BigDecimal.valueOf(1.5))
-        );
-
-        assertEquals(Response.Status.BAD_REQUEST, exception.getErrorCode());
-        verify(articleRepository, never()).update(any(Article.class));
-    }
-
-    @Test
     void incrementQuantity_allowsFractionalQuantity_whenArticleIsSoldByKg() {
         Article article = buildArticle("Riz parfumé (au kg)", 10);
-        article.setUnit(Unit.KG);
+        article.setAtomicUnit("kg");
         when(articleRepository.findById(article.id)).thenReturn(article);
 
         ArticleResponseDTO result = articleService.incrementQuantity(article.id.toHexString(), BigDecimal.valueOf(1.5));
@@ -563,22 +472,6 @@ class ArticleServiceImplTest {
     // ---------------------------------------------------------------
     // receiveStock
     // ---------------------------------------------------------------
-
-    @Test
-    void receiveStock_shouldThrowBadRequest_whenPieceArticleGivenFractionalQty() {
-        Article article = buildArticle("Café", 10);
-        when(articleRepository.findById(article.id)).thenReturn(article);
-
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> articleService.receiveStock(
-                        article.id.toHexString(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(100), BigDecimal.ZERO
-                )
-        );
-
-        assertEquals(Response.Status.BAD_REQUEST, exception.getErrorCode());
-        verify(articleRepository, never()).update(any(Article.class));
-    }
 
     @Test
     void receiveStock_addsQtyAndReplacesCostBasis_withTheNewLot() {

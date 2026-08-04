@@ -90,27 +90,36 @@ public class OrderServiceImpl implements OrderService {
         for (OrderRequestDTO.OrderLineRequestDTO line : orderDTO.items()) {
             ArticleResponseDTO article = articleService.findById(line.articleId());
 
+            BigDecimal ratio = resolveSoldAsRatio(article, line.soldAsLabel());
+            // Coût de revient DU PALIER VENDU (ex: coût des 12 unités atomiques d'un
+            // carton), pas le coût de l'unité atomique seule — indispensable pour que
+            // la marge (price - unitCost) reste juste quand price est le prix du palier
+            // entier, pas un prix à l'unité atomique.
+            BigDecimal unitCost = article.costPrice().multiply(ratio);
+
             OrderItem item = new OrderItem(
                 article.id(),
                 article.name(),
                 line.price(),
                 line.quantity()
             );
-            item.setUnitCost(article.costPrice());
+            item.setUnitCost(unitCost);
+            item.setSoldAsLabel(line.soldAsLabel() != null ? line.soldAsLabel() : article.atomicUnit());
+            item.setSoldAsRatio(ratio);
             items.add(item);
 
             delta = delta.add(
                 line
                     .price()
-                    .subtract(article.costPrice())
+                    .subtract(unitCost)
                     .multiply(line.quantity())
             );
 
-            if (line.price().compareTo(article.costPrice()) < 0) {
+            if (line.price().compareTo(unitCost) < 0) {
                 negativeMarginItems.add(item);
             }
 
-            articleService.decrementQuantity(line.articleId(), line.quantity());
+            articleService.decrementQuantity(line.articleId(), line.quantity().multiply(ratio));
         }
 
         Order order = new Order();
@@ -143,6 +152,25 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return OrderResponseDTO.fromEntity(order);
+    }
+
+    /**
+     * Résout le ratio (nb d'unités atomiques) du palier de vente choisi. soldAsLabel
+     * null/vide ou ne correspondant à aucun palier connu = vente à l'unité atomique
+     * (ratio 1) — matché par libellé plutôt que par index pour rester valide même si
+     * l'admin réordonne/édite packagingLevels entre deux ventes.
+     */
+    private BigDecimal resolveSoldAsRatio(ArticleResponseDTO article, String soldAsLabel) {
+        if (soldAsLabel == null || soldAsLabel.isBlank() || article.packagingLevels() == null) {
+            return BigDecimal.ONE;
+        }
+        return article
+            .packagingLevels()
+            .stream()
+            .filter(level -> soldAsLabel.equals(level.label()))
+            .map(level -> level.ratio())
+            .findFirst()
+            .orElse(BigDecimal.ONE);
     }
 
     /**

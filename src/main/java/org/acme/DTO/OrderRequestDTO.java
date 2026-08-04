@@ -27,6 +27,8 @@ public record OrderRequestDTO(
         @NotBlank(message = "L'identifiant de l'article est obligatoire")
         String articleId,
         BigDecimal price,
-        BigDecimal quantity
+        BigDecimal quantity,
+        /** Libellé du palier de vente choisi (voir Article.packagingLevels) — null = vente à l'unité atomique. */
+        String soldAsLabel
     ) {}
 }

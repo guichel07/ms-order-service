@@ -4,6 +4,8 @@ import io.quarkus.mongodb.panache.PanacheMongoEntity;
 import io.quarkus.mongodb.panache.common.MongoEntity;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -40,8 +42,19 @@ public class Article extends PanacheMongoEntity {
 
     private BigDecimal quantity;
 
-    /** Vente à la pièce (défaut) ou au poids — voir Unit. Absent sur les documents antérieurs à ce champ. */
-    private Unit unit = Unit.PIECE;
+    /**
+     * Plus petite unité indivisible pour cet article, choisie librement à la création/édition
+     * ("pièce", "kg", "verre", "1/4", "boîte de tomate"...). quantity/purchasedQuantity/
+     * criticalStock sont toujours un compte entier d'unités atomiques.
+     */
+    private String atomicUnit = "pièce";
+
+    /**
+     * Paliers de conditionnement/vente disponibles en plus de l'unité atomique seule
+     * (ex: "Sac de 50 verres"). Vide = vente strictement à l'unité atomique. Le prix de
+     * chaque palier est indépendant de son ratio — jamais recalculé automatiquement.
+     */
+    private List<PackagingLevel> packagingLevels = new ArrayList<>();
 
     /** Prix d'achat total du dernier lot reçu. */
     private BigDecimal purchasePrice;

@@ -26,7 +26,6 @@ import org.acme.DTO.BundleContentDTO;
 import org.acme.DTO.OccasionBundleRequestDTO;
 import org.acme.DTO.QuantityAdjustmentDTO;
 import org.acme.DTO.QuantityOrderedDTO;
-import org.acme.Entity.Unit;
 import org.acme.Exception.BusinessException;
 import org.acme.Service.Article.ArticleBundleService;
 import org.acme.Service.Article.ArticleDetailService;
@@ -70,7 +69,8 @@ class ArticleResourceTest {
                 new BigDecimal("1.20"),
                 new BigDecimal("1.20"),
                 BigDecimal.valueOf(50),
-                Unit.PIECE,
+                "pièce",
+                List.of(),
                 new BigDecimal("1.20"),
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
@@ -89,7 +89,7 @@ class ArticleResourceTest {
                 "Croissant", "croissant.svg", "#FFD700", "Viennoiserie",
                 new BigDecimal("1.20"), new BigDecimal("1.20"), new BigDecimal("1.20"), new BigDecimal("1.20"),
                 new BigDecimal("1.20"), BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.valueOf(1), BigDecimal.valueOf(50), BigDecimal.valueOf(5), Unit.PIECE, false, false, null
+                BigDecimal.valueOf(1), BigDecimal.valueOf(50), BigDecimal.valueOf(5), "pièce", List.of(), false, false, null
         );
     }
 
@@ -203,7 +203,7 @@ class ArticleResourceTest {
                 null, "icon.svg", "#000000", "Cat",
                 new BigDecimal("-1"), new BigDecimal("-1"), new BigDecimal("-1"), new BigDecimal("-1"),
                 new BigDecimal("-1"), BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.valueOf(1), BigDecimal.ZERO, BigDecimal.ZERO, Unit.PIECE, false, false, null
+                BigDecimal.valueOf(1), BigDecimal.ZERO, BigDecimal.ZERO, "pièce", List.of(), false, false, null
         );
         when(articleService.register(any(ArticleRequestDTO.class))).thenReturn(sampleArticle);
 

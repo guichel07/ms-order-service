@@ -6,7 +6,6 @@ import org.acme.DTO.OrderRequestDTO;
 import org.acme.DTO.OrderResponseDTO;
 import org.acme.Entity.Client;
 import org.acme.Entity.Order;
-import org.acme.Entity.Unit;
 import org.acme.Exception.BusinessException;
 import org.acme.Repository.ClientRepository;
 import org.acme.Repository.OrderRepository;
@@ -83,7 +82,8 @@ class OrderServiceImplTest {
                 price,
                 price,
                 BigDecimal.valueOf(20),
-                Unit.PIECE,
+                "pièce",
+                List.of(),
                 price,
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
@@ -172,10 +172,10 @@ class OrderServiceImplTest {
         when(clientRepository.findById(client.id)).thenReturn(client);
 
         OrderRequestDTO.OrderLineRequestDTO line1 = new OrderRequestDTO.OrderLineRequestDTO(
-                coffee.id(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(2)
+                coffee.id(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(2), null
         );
         OrderRequestDTO.OrderLineRequestDTO line2 = new OrderRequestDTO.OrderLineRequestDTO(
-                tea.id(), BigDecimal.valueOf(3.0), BigDecimal.valueOf(1)
+                tea.id(), BigDecimal.valueOf(3.0), BigDecimal.valueOf(1), null
         );
 
         OrderRequestDTO orderDTO = new OrderRequestDTO(
@@ -210,7 +210,7 @@ class OrderServiceImplTest {
         ArticleResponseDTO coffee = new ArticleResponseDTO(
                 new ObjectId().toHexString(), "Café", "icon.png", "#FF0000", "Boissons",
                 BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5), BigDecimal.valueOf(1.2),
-                BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5), BigDecimal.valueOf(20), Unit.PIECE,
+                BigDecimal.valueOf(2.5), BigDecimal.valueOf(2.5), BigDecimal.valueOf(20), "pièce", List.of(),
                 BigDecimal.valueOf(1.2), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.valueOf(1), BigDecimal.valueOf(5), false, false, null, false, null
         );
         when(articleService.findById(coffee.id())).thenReturn(coffee);
@@ -224,7 +224,7 @@ class OrderServiceImplTest {
         when(clientRepository.findById(client.id)).thenReturn(client);
 
         OrderRequestDTO.OrderLineRequestDTO line = new OrderRequestDTO.OrderLineRequestDTO(
-                coffee.id(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(3)
+                coffee.id(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(3), null
         );
         OrderRequestDTO orderDTO = new OrderRequestDTO(
                 "John Doe", "john@example.com", Instant.now(), BigDecimal.valueOf(7.5),
@@ -244,7 +244,7 @@ class OrderServiceImplTest {
         when(clientRepository.findById(missingClientId)).thenReturn(null);
 
         OrderRequestDTO.OrderLineRequestDTO line = new OrderRequestDTO.OrderLineRequestDTO(
-                new ObjectId().toHexString(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(1)
+                new ObjectId().toHexString(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(1), null
         );
         OrderRequestDTO orderDTO = new OrderRequestDTO(
                 "John Doe", "john@example.com", Instant.now(), BigDecimal.valueOf(2.5),
@@ -261,7 +261,7 @@ class OrderServiceImplTest {
     @Test
     void register_shouldThrowBadRequest_whenClientIdIsNotAValidObjectId() {
         OrderRequestDTO.OrderLineRequestDTO line = new OrderRequestDTO.OrderLineRequestDTO(
-                new ObjectId().toHexString(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(1)
+                new ObjectId().toHexString(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(1), null
         );
         OrderRequestDTO orderDTO = new OrderRequestDTO(
                 "John Doe", "john@example.com", Instant.now(), BigDecimal.valueOf(2.5),
@@ -288,7 +288,7 @@ class OrderServiceImplTest {
         when(clientRepository.findById(any(ObjectId.class))).thenReturn(client);
 
         OrderRequestDTO.OrderLineRequestDTO line = new OrderRequestDTO.OrderLineRequestDTO(
-                coffee.id(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(1)
+                coffee.id(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(1), null
         );
         OrderRequestDTO order1 = new OrderRequestDTO(
                 "John Doe", "john@example.com", Instant.now(), BigDecimal.valueOf(2.5),
@@ -313,7 +313,7 @@ class OrderServiceImplTest {
                 .thenThrow(new BusinessException(Response.Status.NOT_FOUND, "Article not found"));
 
         OrderRequestDTO.OrderLineRequestDTO line = new OrderRequestDTO.OrderLineRequestDTO(
-                new ObjectId().toHexString(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(1)
+                new ObjectId().toHexString(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(1), null
         );
 
         OrderRequestDTO orderDTO = new OrderRequestDTO(
@@ -340,7 +340,7 @@ class OrderServiceImplTest {
         ArticleResponseDTO rice = new ArticleResponseDTO(
                 new ObjectId().toHexString(), "Riz 25kg", "icon.png", "#FF0000", "Céréales",
                 BigDecimal.valueOf(12000), BigDecimal.valueOf(12000), BigDecimal.valueOf(14000),
-                BigDecimal.valueOf(12000), BigDecimal.valueOf(12000), BigDecimal.valueOf(20), Unit.PIECE,
+                BigDecimal.valueOf(12000), BigDecimal.valueOf(12000), BigDecimal.valueOf(20), "pièce", List.of(),
                 BigDecimal.valueOf(14000), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.valueOf(1), BigDecimal.valueOf(5), false, false, null, false, null
         );
         when(articleService.findById(rice.id())).thenReturn(rice);
@@ -354,7 +354,7 @@ class OrderServiceImplTest {
         when(clientRepository.findById(client.id)).thenReturn(client);
 
         OrderRequestDTO.OrderLineRequestDTO line = new OrderRequestDTO.OrderLineRequestDTO(
-                rice.id(), BigDecimal.valueOf(12000), BigDecimal.valueOf(2)
+                rice.id(), BigDecimal.valueOf(12000), BigDecimal.valueOf(2), null
         );
         OrderRequestDTO orderDTO = new OrderRequestDTO(
                 "Awa Traoré", "awa@example.com", Instant.now(), BigDecimal.valueOf(24000),
@@ -389,7 +389,7 @@ class OrderServiceImplTest {
         when(clientRepository.findById(client.id)).thenReturn(client);
 
         OrderRequestDTO.OrderLineRequestDTO line = new OrderRequestDTO.OrderLineRequestDTO(
-                coffee.id(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(1)
+                coffee.id(), BigDecimal.valueOf(2.5), BigDecimal.valueOf(1), null
         );
         OrderRequestDTO orderDTO = new OrderRequestDTO(
                 "John Doe", "john@example.com", Instant.now(), BigDecimal.valueOf(2.5),

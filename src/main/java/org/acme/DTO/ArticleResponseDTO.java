@@ -2,9 +2,10 @@ package org.acme.DTO;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import org.acme.Entity.Article;
+import org.acme.Entity.PackagingLevel;
 import org.acme.Entity.PriceReview;
-import org.acme.Entity.Unit;
 
 /**
  * Représentation d'un article renvoyée par l'API — jamais l'entité Mongo directement.
@@ -32,7 +33,11 @@ public record ArticleResponseDTO(
 
     BigDecimal quantity,
 
-    Unit unit,
+    /** Plus petite unité indivisible vendable pour cet article ("pièce", "kg", "verre"...). */
+    String atomicUnit,
+
+    /** Paliers de vente additionnels (vide = vente strictement à l'unité atomique). */
+    List<PackagingLevelDTO> packagingLevels,
 
     BigDecimal purchasePrice,
 
@@ -75,10 +80,18 @@ public record ArticleResponseDTO(
         }
     }
 
+    private static PackagingLevelDTO toDTO(PackagingLevel level) {
+        return new PackagingLevelDTO(level.getLabel(), level.getRatio(), level.getPrice());
+    }
+
     public static ArticleResponseDTO fromEntity(Article article) {
         if (article == null) {
             return null;
         }
+        List<PackagingLevelDTO> packagingLevels = article.getPackagingLevels() == null
+            ? List.of()
+            : article.getPackagingLevels().stream().map(ArticleResponseDTO::toDTO).toList();
+
         return new ArticleResponseDTO(
             article.id.toHexString(),
             article.getName(),
@@ -91,7 +104,8 @@ public record ArticleResponseDTO(
             article.getMaxPrice(),
             article.getMarketPrice(),
             article.getQuantity(),
-            article.getUnit(),
+            article.getAtomicUnit(),
+            packagingLevels,
             article.getPurchasePrice(),
             article.getTransport(),
             article.getMisc(),

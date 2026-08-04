@@ -43,3 +43,4 @@ nb-configuration.xml
 src/main/resources/publicKey.pem
 src/main/resources/devPublicKey.pem
 backup-pre-migration/
+backup-pre-*/

@@ -28,7 +28,9 @@ public record OrderResponseDTO(
         String articleId,
         String name,
         BigDecimal price,
-        BigDecimal quantityOrdered
+        BigDecimal quantityOrdered,
+        String soldAsLabel,
+        BigDecimal soldAsRatio
     ) {
         public static OrderItemResponseDTO fromEntity(OrderItem item) {
             if (item == null) {
@@ -38,7 +40,9 @@ public record OrderResponseDTO(
                 item.getArticleId(),
                 item.getName(),
                 item.getPrice(),
-                item.getQuantityOrdered()
+                item.getQuantityOrdered(),
+                item.getSoldAsLabel(),
+                item.getSoldAsRatio()
             );
         }
     }
